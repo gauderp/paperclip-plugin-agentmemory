@@ -1,0 +1,8 @@
+dist
+node_modules
+.paperclip-sdk
+graphify-out
+.env
+.env.*
+scripts/.logs
+*.log

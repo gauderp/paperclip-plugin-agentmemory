@@ -1,0 +1,53 @@
+{
+  "name": "@gaud_erp/paperclip-plugin-agentmemory",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Paperclip connector for local agentmemory (company settings + health probe)",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "build": "node ./esbuild.config.mjs",
+    "dev": "node ./esbuild.config.mjs --watch",
+    "test": "vitest run --config ./vitest.config.ts",
+    "typecheck": "tsc --noEmit",
+    "start:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-agentmemory-windows.ps1",
+    "verify:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-agentmemory-windows.ps1",
+    "demo:windows": "node ./scripts/run-demo-windows.mjs"
+  },
+  "paperclipPlugin": {
+    "manifest": "./dist/manifest.js",
+    "worker": "./dist/worker.js",
+    "ui": "./dist/ui/"
+  },
+  "keywords": ["paperclip", "plugin", "connector", "agentmemory"],
+  "author": "gauderp",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gauderp/paperclip-plugin-agentmemory.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gauderp/paperclip-plugin-agentmemory/issues"
+  },
+  "homepage": "https://github.com/gauderp/paperclip-plugin-agentmemory#readme",
+  "dependencies": {
+    "@paperclipai/plugin-sdk": "2026.517.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.0.8",
+    "esbuild": "^0.27.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}
