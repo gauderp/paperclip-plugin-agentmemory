@@ -1,5 +1,11 @@
 import type { PluginContext, PluginStateScopeKind } from "@paperclipai/plugin-sdk";
-import { DEFAULT_BASE_URL, SETTINGS_STATE_KEY } from "./constants.js";
+import {
+  DEFAULT_BASE_URL,
+  DEFAULT_CONTEXT_WINDOW,
+  DEFAULT_MEMORY_BUDGET_PERCENT,
+  DEFAULT_SEARCH_LIMIT,
+  SETTINGS_STATE_KEY,
+} from "./constants.js";
 
 export type AgentmemoryCompanySettings = {
   baseUrl: string;
@@ -17,6 +23,30 @@ export type AgentmemoryHealthSnapshot = {
   agentmemoryStatus?: string;
 };
 
+export type AgentmemoryMemoryConfig = {
+  contextWindowSize: number;
+  memoryBudgetPercent: number;
+  defaultSearchLimit: number;
+  curatorIntervalHours: number;
+  autoForgetDays: number;
+  sketchTTLDays: number;
+  enableKnowledgeGraph: boolean;
+  enableAutoConsolidate: boolean;
+};
+
+export type AgentmemoryFullSettings = AgentmemoryCompanySettings & AgentmemoryMemoryConfig;
+
+export const MEMORY_CONFIG_DEFAULTS: AgentmemoryMemoryConfig = {
+  contextWindowSize: 128_000,
+  memoryBudgetPercent: 40,
+  defaultSearchLimit: 20,
+  curatorIntervalHours: 6,
+  autoForgetDays: 30,
+  sketchTTLDays: 14,
+  enableKnowledgeGraph: false,
+  enableAutoConsolidate: true,
+};
+
 function normalizeBaseUrl(value: unknown): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     return DEFAULT_BASE_URL;
@@ -24,10 +54,19 @@ function normalizeBaseUrl(value: unknown): string {
   return value.trim().replace(/\/+$/, "");
 }
 
+function positiveNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && value > 0 ? value : fallback;
+}
+
+function clampPercent(value: unknown, fallback: number): number {
+  if (typeof value !== "number") return fallback;
+  return Math.max(1, Math.min(100, value));
+}
+
 export function normalizeCompanySettings(
   companyId: string,
-  input: Partial<AgentmemoryCompanySettings> | null | undefined,
-): AgentmemoryCompanySettings {
+  input: Partial<AgentmemoryFullSettings> | null | undefined,
+): AgentmemoryFullSettings {
   const baseUrl = normalizeBaseUrl(input?.baseUrl);
   const memoryNamespace =
     typeof input?.memoryNamespace === "string" && input.memoryNamespace.trim().length > 0
@@ -38,7 +77,19 @@ export function normalizeCompanySettings(
       ? input.bearerToken.trim()
       : undefined;
 
-  return { baseUrl, memoryNamespace, bearerToken };
+  return {
+    baseUrl,
+    memoryNamespace,
+    bearerToken,
+    contextWindowSize: positiveNumber(input?.contextWindowSize, MEMORY_CONFIG_DEFAULTS.contextWindowSize),
+    memoryBudgetPercent: clampPercent(input?.memoryBudgetPercent, MEMORY_CONFIG_DEFAULTS.memoryBudgetPercent),
+    defaultSearchLimit: positiveNumber(input?.defaultSearchLimit, MEMORY_CONFIG_DEFAULTS.defaultSearchLimit),
+    curatorIntervalHours: positiveNumber(input?.curatorIntervalHours, MEMORY_CONFIG_DEFAULTS.curatorIntervalHours),
+    autoForgetDays: positiveNumber(input?.autoForgetDays, MEMORY_CONFIG_DEFAULTS.autoForgetDays),
+    sketchTTLDays: positiveNumber(input?.sketchTTLDays, MEMORY_CONFIG_DEFAULTS.sketchTTLDays),
+    enableKnowledgeGraph: typeof input?.enableKnowledgeGraph === "boolean" ? input.enableKnowledgeGraph : MEMORY_CONFIG_DEFAULTS.enableKnowledgeGraph,
+    enableAutoConsolidate: typeof input?.enableAutoConsolidate === "boolean" ? input.enableAutoConsolidate : MEMORY_CONFIG_DEFAULTS.enableAutoConsolidate,
+  };
 }
 
 export function companyStateRef(companyId: string) {
@@ -52,16 +103,16 @@ export function companyStateRef(companyId: string) {
 export async function readCompanySettings(
   ctx: PluginContext,
   companyId: string,
-): Promise<AgentmemoryCompanySettings> {
+): Promise<AgentmemoryFullSettings> {
   const stored = await ctx.state.get(companyStateRef(companyId));
-  return normalizeCompanySettings(companyId, stored as Partial<AgentmemoryCompanySettings> | null);
+  return normalizeCompanySettings(companyId, stored as Partial<AgentmemoryFullSettings> | null);
 }
 
 export async function writeCompanySettings(
   ctx: PluginContext,
   companyId: string,
-  input: Partial<AgentmemoryCompanySettings>,
-): Promise<AgentmemoryCompanySettings> {
+  input: Partial<AgentmemoryFullSettings>,
+): Promise<AgentmemoryFullSettings> {
   const next = normalizeCompanySettings(companyId, input);
   await ctx.state.set(companyStateRef(companyId), next);
   return next;
