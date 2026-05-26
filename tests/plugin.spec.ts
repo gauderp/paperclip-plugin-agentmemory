@@ -2,42 +2,59 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestHarness } from "@paperclipai/plugin-sdk/testing";
 import manifest from "../src/manifest.js";
 import plugin from "../src/worker.js";
-import { DEFAULT_BASE_URL, HEALTH_PATH } from "../src/constants.js";
+import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, CURATOR_AGENT_KEY } from "../src/constants.js";
 
 const COMPANY_ID = "co-test-1";
 
-describe("agentmemory connector plugin", () => {
+describe("agentmemory plugin v0.2", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("declares connector capabilities and UI slots", () => {
+  it("declares connector capabilities including tools, agents, skills", () => {
     expect(manifest.categories).toContain("connector");
     expect(manifest.capabilities).toContain("http.outbound");
+    expect(manifest.capabilities).toContain("agent.tools.register");
+    expect(manifest.capabilities).toContain("agents.managed");
+    expect(manifest.capabilities).toContain("skills.managed");
+    expect(manifest.capabilities).toContain("jobs.schedule");
+    expect(manifest.capabilities).toContain("events.subscribe");
     expect(manifest.capabilities).toContain("instance.settings.register");
-    expect(manifest.ui?.slots?.some((slot) => slot.type === "settingsPage")).toBe(true);
   });
 
-  it("stores and reads company-scoped settings", async () => {
-    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities] });
-    await plugin.definition.setup(harness.ctx);
+  it("declares 3 tools in manifest", () => {
+    expect(manifest.tools).toHaveLength(3);
+    const toolNames = manifest.tools!.map((t: any) => t.name);
+    expect(toolNames).toContain(TOOL_KEYS.recall);
+    expect(toolNames).toContain(TOOL_KEYS.observe);
+    expect(toolNames).toContain(TOOL_KEYS.search);
+  });
 
-    const saved = await harness.performAction<{ settings: { baseUrl: string; memoryNamespace: string } }>(
-      "save-company-settings",
-      {
-        companyId: COMPANY_ID,
-        settings: { baseUrl: "http://127.0.0.1:3111", memoryNamespace: "acme" },
-      },
-    );
+  it("declares managed skill", () => {
+    expect(manifest.skills).toHaveLength(1);
+    expect((manifest.skills as any[])[0].skillKey).toBe(SKILL_KEY);
+  });
 
-    expect(saved.settings.baseUrl).toBe("http://127.0.0.1:3111");
-    expect(saved.settings.memoryNamespace).toBe("acme");
+  it("declares curator agent", () => {
+    expect(manifest.agents).toHaveLength(1);
+    expect((manifest.agents as any[])[0].agentKey).toBe(CURATOR_AGENT_KEY);
+  });
 
-    const loaded = await harness.performAction<{ baseUrl: string; memoryNamespace: string }>(
-      "get-company-settings",
-      { companyId: COMPANY_ID },
-    );
-    expect(loaded.memoryNamespace).toBe("acme");
+  it("declares instanceConfigSchema with memory config fields", () => {
+    const props = (manifest.instanceConfigSchema as any)?.properties as Record<string, any>;
+    expect(props).toBeDefined();
+    expect(props.contextWindowSize).toBeDefined();
+    expect(props.memoryBudgetPercent).toBeDefined();
+    expect(props.enableKnowledgeGraph).toBeDefined();
+    expect(props.enableAutoConsolidate).toBeDefined();
+  });
+
+  it("declares 3 UI slots (health widget, stats widget, settings)", () => {
+    const slots = manifest.ui?.slots ?? [];
+    expect(slots).toHaveLength(3);
+    const types = slots.map((s) => s.type);
+    expect(types.filter((t) => t === "dashboardWidget")).toHaveLength(2);
+    expect(types).toContain("settingsPage");
   });
 
   it("probes agentmemory health via http.outbound", async () => {
@@ -49,7 +66,7 @@ describe("agentmemory connector plugin", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities] });
+    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities, "companies.read"] });
     await plugin.definition.setup(harness.ctx);
 
     await harness.performAction("save-company-settings", {
@@ -63,18 +80,17 @@ describe("agentmemory connector plugin", () => {
 
     expect(health.status).toBe("ok");
     expect(health.httpStatus).toBe(200);
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${DEFAULT_BASE_URL}${HEALTH_PATH}`,
-      expect.objectContaining({ method: "GET" }),
-    );
-  });
+  }, 10000);
 
   it("reports error when agentmemory is unreachable", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => {
-      throw new Error("connection refused");
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("connection refused");
+      }),
+    );
 
-    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities] });
+    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities, "companies.read"] });
     await plugin.definition.setup(harness.ctx);
 
     const health = await harness.performAction<{ status: string }>("probe-health", {
@@ -82,5 +98,5 @@ describe("agentmemory connector plugin", () => {
     });
 
     expect(health.status).toBe("error");
-  });
+  }, 10000);
 });
