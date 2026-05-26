@@ -40,13 +40,9 @@ describe("agentmemory plugin v0.2", () => {
     expect((manifest.agents as any[])[0].agentKey).toBe(CURATOR_AGENT_KEY);
   });
 
-  it("declares instanceConfigSchema with memory config fields", () => {
-    const props = (manifest.instanceConfigSchema as any)?.properties as Record<string, any>;
-    expect(props).toBeDefined();
-    expect(props.contextWindowSize).toBeDefined();
-    expect(props.memoryBudgetPercent).toBeDefined();
-    expect(props.enableKnowledgeGraph).toBeDefined();
-    expect(props.enableAutoConsolidate).toBeDefined();
+  it("uses company-scoped state for settings (no instanceConfigSchema)", () => {
+    // Settings are managed via plugin state, not instanceConfigSchema
+    expect((manifest as any).instanceConfigSchema).toBeUndefined();
   });
 
   it("declares 3 UI slots (health widget, stats widget, settings)", () => {

@@ -11,12 +11,8 @@ import { AgentmemoryClient } from "./agentmemory-client.js";
 import { handleRecall } from "./tools/recall.js";
 import { handleObserve } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
-import { reconcileSkillAllCompanies, reconcileSkill } from "./skill.js";
-import {
-  reconcileCuratorAllCompanies,
-  reconcileCurator,
-  runCuratorJob,
-} from "./curator.js";
+import { reconcileSkill } from "./skill.js";
+import { reconcileCurator, runCuratorJob } from "./curator.js";
 import { TOOL_KEYS } from "./constants.js";
 
 function buildClient(
