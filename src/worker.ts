@@ -11,8 +11,8 @@ import { AgentmemoryClient } from "./agentmemory-client.js";
 import { handleRecall } from "./tools/recall.js";
 import { handleObserve } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
-import { reconcileSkill } from "./skill.js";
-import { reconcileCurator, runCuratorJob } from "./curator.js";
+import { reconcileSkillAllCompanies, reconcileSkill } from "./skill.js";
+import { reconcileCuratorAllCompanies, reconcileCurator, runCuratorJob } from "./curator.js";
 import { TOOL_KEYS } from "./constants.js";
 
 function buildClient(
@@ -29,22 +29,17 @@ function buildClient(
 
 const plugin = definePlugin({
   async setup(ctx) {
+    // --- Reconcile skill and curator for all existing companies ---
+    const companies = await ctx.companies.list();
+    for (const company of companies) {
+      await reconcileSkill(ctx, company.id);
+      await reconcileCurator(ctx, company.id);
+    }
+
     // --- Reconcile on new company ---
     ctx.events.on("company.created", async (event) => {
-      await Promise.all([
-        reconcileSkill(ctx, event.companyId),
-        reconcileCurator(ctx, event.companyId),
-      ]);
-    });
-
-    // --- Manual reconcile action (run once after install, or anytime) ---
-    ctx.actions.register("reconcile", async (params) => {
-      const companyId = requireCompanyId(params);
-      await Promise.all([
-        reconcileSkill(ctx, companyId),
-        reconcileCurator(ctx, companyId),
-      ]);
-      return { reconciled: true, companyId };
+      await reconcileSkill(ctx, event.companyId);
+      await reconcileCurator(ctx, event.companyId);
     });
 
     // --- Existing data handler: health ---

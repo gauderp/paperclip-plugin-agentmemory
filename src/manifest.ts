@@ -19,7 +19,7 @@ import {
 const manifest: PaperclipPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
-  version: "0.2.4",
+  version: "0.2.5",
   displayName: "Agent Memory",
   description:
     "Memory-as-Skill system for Paperclip agents. Persistent recall, observation, and search with token budget enforcement.",
@@ -30,6 +30,7 @@ const manifest: PaperclipPluginManifestV1 = {
     "plugin.state.read",
     "plugin.state.write",
     "instance.settings.register",
+    "companies.read",
     "agent.tools.register",
     "agents.managed",
     "skills.managed",
@@ -38,6 +39,75 @@ const manifest: PaperclipPluginManifestV1 = {
     "ui.dashboardWidget.register",
     "ui.action.register",
   ],
+  instanceConfigSchema: {
+    type: "object",
+    properties: {
+      baseUrl: {
+        type: "string",
+        title: "AgentMemory URL",
+        description: "URL do serviço agentmemory",
+        default: "http://127.0.0.1:3111",
+      },
+      memoryNamespace: {
+        type: "string",
+        title: "Memory Namespace",
+        description: "Namespace para isolamento (default: company ID)",
+      },
+      bearerToken: {
+        type: "string",
+        title: "Bearer Token",
+        description: "Token de autenticação (opcional para localhost)",
+      },
+      contextWindowSize: {
+        type: "number",
+        title: "Janela de Contexto (tokens)",
+        description: "Tamanho da janela do modelo usado pelos agentes",
+        default: 128000,
+      },
+      memoryBudgetPercent: {
+        type: "number",
+        title: "Budget de Memória (%)",
+        description: "Percentual máximo da janela para injeção de memória",
+        default: 40,
+      },
+      defaultSearchLimit: {
+        type: "number",
+        title: "Limite de Resultados",
+        description: "Máximo de resultados por busca",
+        default: 20,
+      },
+      curatorIntervalHours: {
+        type: "number",
+        title: "Intervalo do Curador (horas)",
+        description: "Frequência da rotina de consolidação",
+        default: 6,
+      },
+      autoForgetDays: {
+        type: "number",
+        title: "Auto-Forget (dias)",
+        description: "Observações consolidadas são removidas após N dias",
+        default: 30,
+      },
+      sketchTTLDays: {
+        type: "number",
+        title: "TTL de Sketches (dias)",
+        description: "Sketches não-promovidos são descartados após N dias",
+        default: 14,
+      },
+      enableKnowledgeGraph: {
+        type: "boolean",
+        title: "Knowledge Graph",
+        description: "Extrair entidades/relações automaticamente",
+        default: false,
+      },
+      enableAutoConsolidate: {
+        type: "boolean",
+        title: "Auto-Consolidação",
+        description: "Consolidar observações automaticamente após issue completada",
+        default: true,
+      },
+    },
+  },
   tools: [
     {
       name: TOOL_KEYS.recall,
