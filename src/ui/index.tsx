@@ -7,7 +7,9 @@ import {
 } from "@paperclipai/plugin-sdk/ui";
 import { useEffect, useState } from "react";
 import { DEFAULT_BASE_URL } from "../constants.js";
-import type { AgentmemoryCompanySettings, AgentmemoryHealthSnapshot } from "../settings.js";
+import type { AgentmemoryFullSettings, AgentmemoryHealthSnapshot } from "../settings.js";
+
+export { StatsWidget } from "./StatsWidget.js";
 
 export function DashboardWidget(_props: PluginWidgetProps) {
   const { companyId } = useHostContext();
@@ -50,6 +52,14 @@ export function SettingsPage(_props: PluginSettingsPageProps) {
   const [health, setHealth] = useState<AgentmemoryHealthSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contextWindowSize, setContextWindowSize] = useState(128000);
+  const [memoryBudgetPercent, setMemoryBudgetPercent] = useState(40);
+  const [defaultSearchLimit, setDefaultSearchLimit] = useState(20);
+  const [curatorIntervalHours, setCuratorIntervalHours] = useState(6);
+  const [autoForgetDays, setAutoForgetDays] = useState(30);
+  const [sketchTTLDays, setSketchTTLDays] = useState(14);
+  const [enableKnowledgeGraph, setEnableKnowledgeGraph] = useState(false);
+  const [enableAutoConsolidate, setEnableAutoConsolidate] = useState(true);
 
   useEffect(() => {
     if (!companyId) return;
@@ -58,10 +68,18 @@ export function SettingsPage(_props: PluginSettingsPageProps) {
     setError(null);
     void loadSettings({ companyId })
       .then((raw) => {
-        const settings = raw as AgentmemoryCompanySettings;
+        const settings = raw as AgentmemoryFullSettings;
         setBaseUrl(settings.baseUrl ?? DEFAULT_BASE_URL);
         setMemoryNamespace(settings.memoryNamespace ?? companyId);
         setBearerToken(settings.bearerToken ?? "");
+        setContextWindowSize(settings.contextWindowSize ?? 128000);
+        setMemoryBudgetPercent(settings.memoryBudgetPercent ?? 40);
+        setDefaultSearchLimit(settings.defaultSearchLimit ?? 20);
+        setCuratorIntervalHours(settings.curatorIntervalHours ?? 6);
+        setAutoForgetDays(settings.autoForgetDays ?? 30);
+        setSketchTTLDays(settings.sketchTTLDays ?? 14);
+        setEnableKnowledgeGraph(settings.enableKnowledgeGraph ?? false);
+        setEnableAutoConsolidate(settings.enableAutoConsolidate ?? true);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setBusy(false));
@@ -81,8 +99,16 @@ export function SettingsPage(_props: PluginSettingsPageProps) {
           baseUrl,
           memoryNamespace: memoryNamespace || companyId,
           bearerToken: bearerToken || undefined,
+          contextWindowSize,
+          memoryBudgetPercent,
+          defaultSearchLimit,
+          curatorIntervalHours,
+          autoForgetDays,
+          sketchTTLDays,
+          enableKnowledgeGraph,
+          enableAutoConsolidate,
         },
-      })) as { settings: AgentmemoryCompanySettings; health: AgentmemoryHealthSnapshot };
+      })) as { settings: AgentmemoryFullSettings; health: AgentmemoryHealthSnapshot };
       setHealth(result.health);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -140,6 +166,91 @@ export function SettingsPage(_props: PluginSettingsPageProps) {
           placeholder="AGENTMEMORY_SECRET when enabled"
           style={{ padding: "0.5rem" }}
         />
+      </label>
+
+      <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "0.5rem 0" }} />
+      <p style={{ margin: 0, color: "#64748b", fontSize: "0.875rem", fontWeight: 600 }}>
+        Memory Configuration
+      </p>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Context window (tokens)</span>
+        <input
+          type="number"
+          value={contextWindowSize}
+          onChange={(e) => setContextWindowSize(Number(e.target.value))}
+          style={{ padding: "0.5rem" }}
+        />
+      </label>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Memory budget (%)</span>
+        <input
+          type="number"
+          min={1}
+          max={100}
+          value={memoryBudgetPercent}
+          onChange={(e) => setMemoryBudgetPercent(Number(e.target.value))}
+          style={{ padding: "0.5rem" }}
+        />
+      </label>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Default search limit</span>
+        <input
+          type="number"
+          value={defaultSearchLimit}
+          onChange={(e) => setDefaultSearchLimit(Number(e.target.value))}
+          style={{ padding: "0.5rem" }}
+        />
+      </label>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Curator interval (hours)</span>
+        <input
+          type="number"
+          value={curatorIntervalHours}
+          onChange={(e) => setCuratorIntervalHours(Number(e.target.value))}
+          style={{ padding: "0.5rem" }}
+        />
+      </label>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Auto-forget (days)</span>
+        <input
+          type="number"
+          value={autoForgetDays}
+          onChange={(e) => setAutoForgetDays(Number(e.target.value))}
+          style={{ padding: "0.5rem" }}
+        />
+      </label>
+
+      <label style={{ display: "grid", gap: "0.25rem" }}>
+        <span>Sketch TTL (days)</span>
+        <input
+          type="number"
+          value={sketchTTLDays}
+          onChange={(e) => setSketchTTLDays(Number(e.target.value))}
+          style={{ padding: "0.5rem" }}
+        />
+      </label>
+
+      <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <input
+          type="checkbox"
+          checked={enableKnowledgeGraph}
+          onChange={(e) => setEnableKnowledgeGraph(e.target.checked)}
+        />
+        <span>Enable Knowledge Graph extraction</span>
+      </label>
+
+      <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <input
+          type="checkbox"
+          checked={enableAutoConsolidate}
+          onChange={(e) => setEnableAutoConsolidate(e.target.checked)}
+        />
+        <span>Auto-consolidate after issue completed</span>
       </label>
 
       <div style={{ display: "flex", gap: "0.5rem" }}>
