@@ -1,17 +1,49 @@
-import esbuild from "esbuild";
-import { createPluginBundlerPresets } from "@paperclipai/plugin-sdk/bundlers";
+import { build, context } from "esbuild";
 
-const presets = createPluginBundlerPresets({ uiEntry: "src/ui/index.tsx" });
-const watch = process.argv.includes("--watch");
+const isWatch = process.argv.includes("--watch");
 
-const workerCtx = await esbuild.context(presets.esbuild.worker);
-const manifestCtx = await esbuild.context(presets.esbuild.manifest);
-const uiCtx = await esbuild.context(presets.esbuild.ui);
+const workerConfig = {
+  entryPoints: ["src/worker.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node22",
+  format: "esm",
+  outfile: "dist/worker.js",
+  sourcemap: true,
+};
 
-if (watch) {
+const manifestConfig = {
+  entryPoints: ["src/manifest.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node22",
+  format: "esm",
+  outfile: "dist/manifest.js",
+  sourcemap: true,
+  external: ["@paperclipai/plugin-sdk"],
+};
+
+const uiConfig = {
+  entryPoints: ["src/ui/index.tsx"],
+  bundle: true,
+  platform: "browser",
+  target: "es2022",
+  format: "esm",
+  outfile: "dist/ui/index.js",
+  sourcemap: true,
+  external: ["react", "react-dom", "@paperclipai/plugin-sdk"],
+  jsx: "automatic",
+};
+
+if (isWatch) {
+  const [workerCtx, manifestCtx, uiCtx] = await Promise.all([
+    context(workerConfig),
+    context(manifestConfig),
+    context(uiConfig),
+  ]);
   await Promise.all([workerCtx.watch(), manifestCtx.watch(), uiCtx.watch()]);
-  console.log("esbuild watch mode enabled for worker, manifest, and ui");
+  console.log("Watching for changes...");
 } else {
-  await Promise.all([workerCtx.rebuild(), manifestCtx.rebuild(), uiCtx.rebuild()]);
-  await Promise.all([workerCtx.dispose(), manifestCtx.dispose(), uiCtx.dispose()]);
+  await Promise.all([build(workerConfig), build(manifestConfig), build(uiConfig)]);
+  console.log("Build complete.");
 }
