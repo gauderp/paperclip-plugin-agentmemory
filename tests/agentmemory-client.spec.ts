@@ -48,7 +48,7 @@ describe("AgentmemoryClient", () => {
 
     await client.smartSearch("test", 5);
 
-    const fetchCall = http.fetch.mock.calls[0];
+    const fetchCall = http.fetch.mock.calls[0] as unknown as [string, { headers: Record<string, string> }];
     expect(fetchCall[1].headers.Authorization).toBe("Bearer my-secret");
   });
 
