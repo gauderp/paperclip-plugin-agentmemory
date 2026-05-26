@@ -4,7 +4,7 @@ import { EXPORT_NAMES, PLUGIN_ID, SLOT_IDS } from "./constants.js";
 const manifest: PaperclipPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
-  version: "0.3.0",
+  version: "0.3.1",
   displayName: "Agent Memory",
   description:
     "Connector for local agentmemory. Company-scoped settings and health probe.",
