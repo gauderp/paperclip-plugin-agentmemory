@@ -2,20 +2,50 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestHarness } from "@paperclipai/plugin-sdk/testing";
 import manifest from "../src/manifest.js";
 import plugin from "../src/worker.js";
-import { DEFAULT_BASE_URL, HEALTH_PATH } from "../src/constants.js";
+import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, CURATOR_AGENT_KEY } from "../src/constants.js";
 
 const COMPANY_ID = "co-test-1";
 
-describe("agentmemory connector plugin", () => {
+describe("agentmemory plugin v0.4", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("declares connector capabilities and UI slots", () => {
+  it("declares connector capabilities including tools, agents, skills", () => {
     expect(manifest.categories).toContain("connector");
     expect(manifest.capabilities).toContain("http.outbound");
-    expect(manifest.capabilities).toContain("instance.settings.register");
-    expect(manifest.ui?.slots?.some((slot) => slot.type === "settingsPage")).toBe(true);
+    expect(manifest.capabilities).toContain("agent.tools.register");
+    expect(manifest.capabilities).toContain("agents.managed");
+    expect(manifest.capabilities).toContain("skills.managed");
+    expect(manifest.capabilities).toContain("jobs.schedule");
+    expect(manifest.capabilities).toContain("events.subscribe");
+    expect(manifest.capabilities).toContain("companies.read");
+  });
+
+  it("declares 3 tools in manifest", () => {
+    expect(manifest.tools).toHaveLength(3);
+    const toolNames = manifest.tools!.map((t: any) => t.name);
+    expect(toolNames).toContain(TOOL_KEYS.recall);
+    expect(toolNames).toContain(TOOL_KEYS.observe);
+    expect(toolNames).toContain(TOOL_KEYS.search);
+  });
+
+  it("declares managed skill", () => {
+    expect(manifest.skills).toHaveLength(1);
+    expect((manifest.skills as any[])[0].skillKey).toBe(SKILL_KEY);
+  });
+
+  it("declares curator agent", () => {
+    expect(manifest.agents).toHaveLength(1);
+    expect((manifest.agents as any[])[0].agentKey).toBe(CURATOR_AGENT_KEY);
+  });
+
+  it("declares 3 UI slots (health widget, stats widget, settings)", () => {
+    const slots = manifest.ui?.slots ?? [];
+    expect(slots).toHaveLength(3);
+    const types = slots.map((s) => s.type);
+    expect(types.filter((t) => t === "dashboardWidget")).toHaveLength(2);
+    expect(types).toContain("settingsPage");
   });
 
   it("probes agentmemory health via http.outbound", async () => {
@@ -27,7 +57,7 @@ describe("agentmemory connector plugin", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities] });
+    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities, "companies.read"] });
     await plugin.definition.setup(harness.ctx);
 
     await harness.performAction("save-company-settings", {
@@ -51,7 +81,7 @@ describe("agentmemory connector plugin", () => {
       }),
     );
 
-    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities] });
+    const harness = createTestHarness({ manifest, capabilities: [...manifest.capabilities, "companies.read"] });
     await plugin.definition.setup(harness.ctx);
 
     const health = await harness.performAction<{ status: string }>("probe-health", {
