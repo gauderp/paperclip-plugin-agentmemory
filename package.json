@@ -1,6 +1,6 @@
 {
   "name": "@gaud_erp/paperclip-plugin-agentmemory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Paperclip connector for local agentmemory (company settings + health probe)",
   "publishConfig": {
