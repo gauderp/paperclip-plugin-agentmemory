@@ -1,6 +1,6 @@
 {
   "name": "@gaud_erp/paperclip-plugin-agentmemory",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Memory-as-Skill plugin for Paperclip — persistent recall, observation, and search with token budget enforcement",
   "publishConfig": {
@@ -26,7 +26,12 @@
     "worker": "./dist/worker.js",
     "ui": "./dist/ui/"
   },
-  "keywords": ["paperclip", "plugin", "connector", "agentmemory"],
+  "keywords": [
+    "paperclip",
+    "plugin",
+    "connector",
+    "agentmemory"
+  ],
   "author": "paperclip-plugin-agentmemory contributors",
   "license": "MIT",
   "repository": {

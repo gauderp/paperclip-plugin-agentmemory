@@ -19,7 +19,7 @@ import {
 const manifest: PaperclipPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
-  version: "0.2.0",
+  version: "0.2.1",
   displayName: "Agent Memory",
   description:
     "Memory-as-Skill system for Paperclip agents. Persistent recall, observation, and search with token budget enforcement.",
@@ -30,6 +30,7 @@ const manifest: PaperclipPluginManifestV1 = {
     "plugin.state.read",
     "plugin.state.write",
     "instance.settings.register",
+    "companies.read",
     "agent.tools.register",
     "agents.managed",
     "skills.managed",
