@@ -33,20 +33,22 @@ function buildClient(
 
 const plugin = definePlugin({
   async setup(ctx) {
-    // --- Reconcile skill and curator agent for all companies (deferred, non-blocking) ---
-    Promise.all([
-      reconcileSkillAllCompanies(ctx),
-      reconcileCuratorAllCompanies(ctx),
-    ]).catch((err) => {
-      ctx.logger.warn("Deferred reconciliation failed, will retry on next company event", { error: String(err) });
-    });
-
     // --- Reconcile on new company ---
     ctx.events.on("company.created", async (event) => {
       await Promise.all([
         reconcileSkill(ctx, event.companyId),
         reconcileCurator(ctx, event.companyId),
       ]);
+    });
+
+    // --- Manual reconcile action (run once after install, or anytime) ---
+    ctx.actions.register("reconcile", async (params) => {
+      const companyId = requireCompanyId(params);
+      await Promise.all([
+        reconcileSkill(ctx, companyId),
+        reconcileCurator(ctx, companyId),
+      ]);
+      return { reconciled: true, companyId };
     });
 
     // --- Existing data handler: health ---
