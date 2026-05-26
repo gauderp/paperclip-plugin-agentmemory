@@ -79,41 +79,66 @@ After installing, configure the plugin under **Settings > Agent Memory** in the 
 | Knowledge Graph | `false` | Extract entities/relations automatically |
 | Auto-Consolidate | `true` | Consolidate memory after an issue is completed |
 
-## How It Works
+## Usage
 
-### Agent Memory Protocol
+### 1. Start agentmemory
 
-Every agent receives a managed skill that teaches the memory protocol:
+The plugin requires a running [agentmemory](https://www.agent-memory.dev/) service:
 
-1. **At task start** — call `memory-recall` with a description of the task. The agent receives relevant prior context (decisions, patterns, failures) without re-reading files or re-investigating.
-
-2. **During work** — call `memory-observe` to capture:
-   - `"decision"` — architectural or design decisions
-   - `"discovery"` — non-obvious findings
-   - `"pattern"` — recurring patterns identified
-   - `"failure"` — unexpected failures and root causes
-
-3. **When in doubt** — call `memory-search` to check "have we tried this before?" or "how did we solve X?"
-
-### Budget Engine
-
-The budget engine ensures memory never overwhelms the context window:
-
-```
-availableBudget = (contextWindow × budgetPercent) - toolOverhead
+```bash
+npx agentmemory
+# Runs at http://127.0.0.1:3111
 ```
 
-Results from `memory-recall` are ranked by relevance and truncated at the budget. The agent receives `tokenCount` so it knows exactly how much context was consumed.
+### 2. Configure the connection
 
-### Curator Agent
+Go to **Settings > Agent Memory** in the Paperclip UI:
 
-A managed curator agent runs periodically (configurable) and after issues are completed:
+1. Set the **AgentMemory URL** (default `http://127.0.0.1:3111`)
+2. Leave **Memory Namespace** empty to use the company ID
+3. Leave **Bearer Token** empty for localhost
+4. Click **Save**, then **Test connection** — status should show "ok"
 
+### 3. Automatic setup
+
+On startup, the plugin automatically:
+- Injects the **Agent Memory** skill into all agents
+- Creates the **Memory Curator** agent for each company
+
+No manual action needed — all agents immediately gain memory capabilities.
+
+### 4. How agents use memory
+
+Any agent with the skill receives 3 tools:
+
+**At the start of each task** — the agent calls `memory-recall` to receive relevant context (prior decisions, known patterns, past failures). This saves tokens by avoiding re-reading files and re-investigating solved problems.
+
+**During work** — the agent calls `memory-observe` to capture insights:
+- `"decision"` — architectural or design decisions made
+- `"discovery"` — non-obvious findings
+- `"pattern"` — recurring patterns identified
+- `"failure"` — unexpected failures and root causes
+
+**When in doubt** — the agent calls `memory-search` to check "have we tried this before?" or "how did we solve X last time?" before investigating from scratch.
+
+### 5. Token budget
+
+The `memory-recall` tool never injects more than **40%** of the context window (configurable in settings). Results are ranked by relevance (hybrid BM25 + vector + knowledge graph search) and truncated at the budget. The agent receives a `tokenCount` field so it knows exactly how much context was consumed.
+
+### 6. Automatic curation
+
+After an issue is marked as `done` or `completed`, the curator agent automatically:
 - Consolidates raw observations into compact crystals
 - Compresses history via flow compression
 - Auto-forgets observations older than the configured threshold
 - Garbage-collects unpromoted sketches
 - Extracts knowledge graph entities/relations (if enabled)
+
+### 7. Dashboard
+
+Two widgets appear on the Paperclip dashboard:
+- **Agent Memory Health** — connection status with the agentmemory service
+- **Agent Memory Stats** — count of active memories, graph nodes, and graph edges
 
 ## Agent Tools Reference
 
@@ -172,7 +197,7 @@ Set `AGENTMEMORY_URL=http://127.0.0.1:3111` when running outside these scripts.
 | Field | Value |
 |-------|-------|
 | Plugin ID | `customizar.agentmemory` |
-| Version | `0.2.0` |
+| Version | `0.4.0` |
 | Category | `connector` |
 | Default URL | `http://127.0.0.1:3111` |
 
