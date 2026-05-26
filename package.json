@@ -1,5 +1,5 @@
 {
-  "name": "paperclip-plugin-agentmemory",
+  "name": "@gaud_erp/paperclip-plugin-agentmemory",
   "version": "0.2.0",
   "type": "module",
   "description": "Memory-as-Skill plugin for Paperclip — persistent recall, observation, and search with token budget enforcement",
