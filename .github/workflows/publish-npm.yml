@@ -1,4 +1,4 @@
-# Publica @gaud_erp/paperclip-plugin-agentmemory no npmjs quando uma release (tag v*) é criada no GitHub.
+# Publishes paperclip-plugin-agentmemory to npmjs when a release tag (v*) is created.
 name: Publish npm
 
 on:
