@@ -1,8 +1,8 @@
 {
-  "name": "@gaud_erp/paperclip-plugin-agentmemory",
+  "name": "paperclip-plugin-agentmemory",
   "version": "0.2.0",
   "type": "module",
-  "description": "Paperclip connector for local agentmemory (company settings + health probe)",
+  "description": "Memory-as-Skill plugin for Paperclip — persistent recall, observation, and search with token budget enforcement",
   "publishConfig": {
     "access": "public"
   },
@@ -27,7 +27,7 @@
     "ui": "./dist/ui/"
   },
   "keywords": ["paperclip", "plugin", "connector", "agentmemory"],
-  "author": "gauderp",
+  "author": "paperclip-plugin-agentmemory contributors",
   "license": "MIT",
   "repository": {
     "type": "git",

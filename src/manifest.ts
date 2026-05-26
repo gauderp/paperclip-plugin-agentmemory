@@ -23,7 +23,7 @@ const manifest: PaperclipPluginManifestV1 = {
   displayName: "Agent Memory",
   description:
     "Memory-as-Skill system for Paperclip agents. Persistent recall, observation, and search with token budget enforcement.",
-  author: "Customizar",
+  author: "paperclip-plugin-agentmemory contributors",
   categories: ["connector"],
   capabilities: [
     "http.outbound",
