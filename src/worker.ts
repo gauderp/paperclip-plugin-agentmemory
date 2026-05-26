@@ -33,11 +33,13 @@ function buildClient(
 
 const plugin = definePlugin({
   async setup(ctx) {
-    // --- Reconcile skill and curator agent for all companies ---
-    await Promise.all([
+    // --- Reconcile skill and curator agent for all companies (deferred, non-blocking) ---
+    Promise.all([
       reconcileSkillAllCompanies(ctx),
       reconcileCuratorAllCompanies(ctx),
-    ]);
+    ]).catch((err) => {
+      ctx.logger.warn("Deferred reconciliation failed, will retry on next company event", { error: String(err) });
+    });
 
     // --- Reconcile on new company ---
     ctx.events.on("company.created", async (event) => {
