@@ -10,7 +10,7 @@ import {
 import { calculateBudget } from "./budget.js";
 import { AgentmemoryClient } from "./agentmemory-client.js";
 import { handleRecall, type ActivityLogger, type RecallCache, type RecallOutput } from "./tools/recall.js";
-import { handleObserve } from "./tools/observe.js";
+import { handleObserve, type ObserveStateTracker } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
 import { handleForget } from "./tools/forget.js";
 import { reconcileSkill } from "./skill.js";
@@ -72,6 +72,14 @@ const plugin = definePlugin({
         } catch {
           return null;
         }
+      },
+    };
+
+    const observeTracker: ObserveStateTracker = {
+      async incrementObserveCount(runId: string) {
+        const key = { scopeKind: "run" as const, scopeId: runId, stateKey: "memory.observeCount" };
+        const current = (await ctx.state.get(key).catch(() => 0)) as number;
+        await ctx.state.set(key, (current || 0) + 1);
       },
     };
 
@@ -202,12 +210,12 @@ const plugin = definePlugin({
         const settings = await readCompanySettings(ctx, runCtx.companyId);
         const client = await buildClientWithSecrets(settings);
         const activity = activityFor(runCtx.companyId);
-        const scope = { projectId: (runCtx as any).projectId };
+        const scope = { projectId: (runCtx as any).projectId, runId: (runCtx as any).runId };
         const result = await handleObserve(client, {
           observation: String(p.observation ?? ""),
           category: p.category as "decision" | "discovery" | "pattern" | "failure",
           project: p.project ? String(p.project) : undefined,
-        }, activity, scope);
+        }, activity, scope, observeTracker);
         return { data: result };
       },
     );
@@ -357,6 +365,63 @@ const plugin = definePlugin({
         logger.info("auto-recall completed", { runId, resultCount: result.sources.length, tokenCount: result.tokenCount });
       } catch (err) {
         logger.warn("auto-recall failed", { runId, err });
+      }
+    });
+
+    // --- Auto-observe on agent run finish ---
+    ctx.events.on("agent.run.finished", async (event) => {
+      const companyId = event.companyId;
+      if (!companyId) return;
+
+      const settings = await readCompanySettings(ctx, companyId);
+      if (!settings.enableAutoObserve) return;
+
+      const payload = event.payload as Record<string, unknown> | undefined;
+      const runId = (payload?.runId as string | undefined) ?? event.entityId;
+      const projectId = payload?.projectId as string | undefined;
+      const issueId = payload?.issueId as string | undefined;
+
+      if (!runId) return;
+
+      try {
+        // Check manual observe count — skip if agent already actively observed
+        const observeCount = await ctx.state.get({
+          scopeKind: "run",
+          scopeId: runId,
+          stateKey: "memory.observeCount",
+        }).catch(() => 0) as number;
+
+        if ((observeCount || 0) >= 2) {
+          logger.info("skipping auto-observe, agent already observed during run", { runId, observeCount });
+          return;
+        }
+
+        // Build summary from payload or issue
+        let summary = payload?.summary as string | undefined;
+        if (!summary && issueId) {
+          try {
+            const issue = await ctx.issues.get(issueId, companyId);
+            if (issue) {
+              summary = `Completed work on: ${issue.title}`;
+            }
+          } catch {
+            logger.warn("could not fetch issue for auto-observe", { issueId });
+          }
+        }
+
+        if (!summary) {
+          summary = `Agent run ${runId} completed`;
+        }
+
+        const client = await buildClientWithSecrets(settings);
+        await handleObserve(client, {
+          observation: summary,
+          category: "discovery",
+        }, activityFor(companyId), { projectId, runId });
+
+        logger.info("auto-observe completed", { runId });
+      } catch (err) {
+        logger.warn("auto-observe failed", { runId, err });
       }
     });
 
