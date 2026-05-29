@@ -32,6 +32,8 @@ export type AgentmemoryMemoryConfig = {
   sketchTTLDays: number;
   enableKnowledgeGraph: boolean;
   enableAutoConsolidate: boolean;
+  enableAutoRecall: boolean;
+  enableAutoObserve: boolean;
 };
 
 export type AgentmemoryFullSettings = AgentmemoryCompanySettings & AgentmemoryMemoryConfig;
@@ -45,6 +47,8 @@ export const MEMORY_CONFIG_DEFAULTS: AgentmemoryMemoryConfig = {
   sketchTTLDays: 14,
   enableKnowledgeGraph: false,
   enableAutoConsolidate: true,
+  enableAutoRecall: true,
+  enableAutoObserve: true,
 };
 
 function normalizeBaseUrl(value: unknown): string {
@@ -89,6 +93,8 @@ export function normalizeCompanySettings(
     sketchTTLDays: positiveNumber(input?.sketchTTLDays, MEMORY_CONFIG_DEFAULTS.sketchTTLDays),
     enableKnowledgeGraph: typeof input?.enableKnowledgeGraph === "boolean" ? input.enableKnowledgeGraph : MEMORY_CONFIG_DEFAULTS.enableKnowledgeGraph,
     enableAutoConsolidate: typeof input?.enableAutoConsolidate === "boolean" ? input.enableAutoConsolidate : MEMORY_CONFIG_DEFAULTS.enableAutoConsolidate,
+    enableAutoRecall: typeof input?.enableAutoRecall === "boolean" ? input.enableAutoRecall : MEMORY_CONFIG_DEFAULTS.enableAutoRecall,
+    enableAutoObserve: typeof input?.enableAutoObserve === "boolean" ? input.enableAutoObserve : MEMORY_CONFIG_DEFAULTS.enableAutoObserve,
   };
 }
 
