@@ -7,6 +7,11 @@ export type ActivityLogger = {
 
 export type RunScope = {
   projectId?: string;
+  runId?: string;
+};
+
+export type RecallCache = {
+  get(runId: string): Promise<RecallOutput | null>;
 };
 
 const noopActivity: ActivityLogger = { log: async () => {} };
@@ -28,7 +33,20 @@ export async function handleRecall(
   input: RecallInput,
   activity: ActivityLogger = noopActivity,
   scope: RunScope = {},
+  cache?: RecallCache,
 ): Promise<RecallOutput> {
+  // Check cache first (auto-recall result)
+  if (cache && scope.runId) {
+    const cached = await cache.get(scope.runId);
+    if (cached) {
+      await activity.log({
+        message: `Returned cached auto-recall (${cached.tokenCount} tokens)`,
+        metadata: { tokenCount: cached.tokenCount, cached: true },
+      });
+      return cached;
+    }
+  }
+
   const project = input.project ?? scope.projectId;
   const maxTokens = input.maxTokens ?? 48_200;
   const rawResults = await client.smartSearch(input.query, 50, project);

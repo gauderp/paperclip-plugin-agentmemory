@@ -9,7 +9,7 @@ import {
 } from "./settings.js";
 import { calculateBudget } from "./budget.js";
 import { AgentmemoryClient } from "./agentmemory-client.js";
-import { handleRecall, type ActivityLogger } from "./tools/recall.js";
+import { handleRecall, type ActivityLogger, type RecallCache, type RecallOutput } from "./tools/recall.js";
 import { handleObserve } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
 import { handleForget } from "./tools/forget.js";
@@ -59,6 +59,21 @@ const plugin = definePlugin({
         logger,
       );
     }
+
+    const recallCache: RecallCache = {
+      async get(runId: string) {
+        try {
+          const cached = await ctx.state.get({
+            scopeKind: "run",
+            scopeId: runId,
+            stateKey: "memory.autoRecall",
+          });
+          return cached as RecallOutput | null;
+        } catch {
+          return null;
+        }
+      },
+    };
 
     // --- Reconcile skill and curator for all existing companies ---
     const companies = await ctx.companies.list();
@@ -153,12 +168,12 @@ const plugin = definePlugin({
         const client = await buildClientWithSecrets(settings);
         const budget = calculateBudget(settings.contextWindowSize, settings.memoryBudgetPercent);
         const activity = activityFor(runCtx.companyId);
-        const scope = { projectId: (runCtx as any).projectId };
+        const scope = { projectId: (runCtx as any).projectId, runId: (runCtx as any).runId };
         const result = await handleRecall(client, {
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
           maxTokens: typeof p.maxTokens === "number" ? p.maxTokens : budget,
-        }, activity, scope);
+        }, activity, scope, recallCache);
         return { data: result };
       },
     );
@@ -295,6 +310,53 @@ const plugin = definePlugin({
           message: `Curator (issue completed): consolidated ${result.consolidated}, compressed ${result.compressed}`,
           metadata: result,
         });
+      }
+    });
+
+    // --- Auto-recall on agent run start ---
+    ctx.events.on("agent.run.started", async (event) => {
+      const companyId = event.companyId;
+      if (!companyId) return;
+
+      const settings = await readCompanySettings(ctx, companyId);
+      if (!settings.enableAutoRecall) return;
+
+      const payload = event.payload as Record<string, unknown> | undefined;
+      const runId = (payload?.runId as string | undefined) ?? event.entityId;
+      const projectId = payload?.projectId as string | undefined;
+      const issueId = payload?.issueId as string | undefined;
+
+      if (!runId) return;
+
+      try {
+        let query = "general context";
+        if (issueId) {
+          try {
+            const issue = await ctx.issues.get(issueId, companyId);
+            if (issue) {
+              query = [issue.title, (issue as any).description].filter(Boolean).join(" — ");
+            }
+          } catch {
+            logger.warn("could not fetch issue for auto-recall", { issueId, companyId });
+          }
+        }
+
+        const client = await buildClientWithSecrets(settings);
+        const budget = calculateBudget(settings.contextWindowSize, settings.memoryBudgetPercent);
+        const result = await handleRecall(client, {
+          query,
+          maxTokens: budget,
+        }, activityFor(companyId), { projectId });
+
+        await ctx.state.set({
+          scopeKind: "run",
+          scopeId: runId,
+          stateKey: "memory.autoRecall",
+        }, result);
+
+        logger.info("auto-recall completed", { runId, resultCount: result.sources.length, tokenCount: result.tokenCount });
+      } catch (err) {
+        logger.warn("auto-recall failed", { runId, err });
       }
     });
 

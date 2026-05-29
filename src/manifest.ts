@@ -40,6 +40,7 @@ const manifest: PaperclipPluginManifestV1 = {
     "ui.dashboardWidget.register",
     "ui.action.register",
     "secrets.read-ref",
+    "activity.log.write",
   ],
   tools: [
     {
