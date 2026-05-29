@@ -24,6 +24,16 @@ You have access to persistent memory tools. Use them to avoid re-doing work and 
 - "Have we tried this before?" → \`memory-search\` before investigating from scratch
 - "How did we solve X last time?" → \`memory-search\` with relevant context
 
+## Correcting memories
+- Recall returned something outdated or wrong? → \`memory-forget\` with the memoryId from the result
+- Then observe the correct information with \`memory-observe\`
+- Search results and recall results include a \`source\` field — use it as the memoryId for forget
+
+## Project scoping
+- Project context is injected automatically from your current run context
+- You do NOT need to pass the \`project\` parameter unless targeting a different project
+- To search across all projects, pass \`project: "*"\`
+
 ## Rules
 - Do NOT observe trivial information (imports, boilerplate, obvious code)
 - Do NOT observe entire code — observe the decision or insight behind it
