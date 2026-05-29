@@ -153,11 +153,12 @@ const plugin = definePlugin({
         const client = await buildClientWithSecrets(settings);
         const budget = calculateBudget(settings.contextWindowSize, settings.memoryBudgetPercent);
         const activity = activityFor(runCtx.companyId);
+        const scope = { projectId: (runCtx as any).projectId };
         const result = await handleRecall(client, {
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
           maxTokens: typeof p.maxTokens === "number" ? p.maxTokens : budget,
-        }, activity);
+        }, activity, scope);
         return { data: result };
       },
     );
@@ -186,11 +187,12 @@ const plugin = definePlugin({
         const settings = await readCompanySettings(ctx, runCtx.companyId);
         const client = await buildClientWithSecrets(settings);
         const activity = activityFor(runCtx.companyId);
+        const scope = { projectId: (runCtx as any).projectId };
         const result = await handleObserve(client, {
           observation: String(p.observation ?? ""),
           category: p.category as "decision" | "discovery" | "pattern" | "failure",
           project: p.project ? String(p.project) : undefined,
-        }, activity);
+        }, activity, scope);
         return { data: result };
       },
     );
@@ -215,11 +217,12 @@ const plugin = definePlugin({
         const settings = await readCompanySettings(ctx, runCtx.companyId);
         const client = await buildClientWithSecrets(settings);
         const activity = activityFor(runCtx.companyId);
+        const scope = { projectId: (runCtx as any).projectId };
         const result = await handleSearch(client, {
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
           limit: typeof p.limit === "number" ? p.limit : settings.defaultSearchLimit,
-        }, activity);
+        }, activity, scope);
         return { data: result };
       },
     );

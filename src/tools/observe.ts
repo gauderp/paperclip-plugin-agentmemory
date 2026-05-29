@@ -1,5 +1,5 @@
 import type { AgentmemoryClient } from "../agentmemory-client.js";
-import type { ActivityLogger } from "./recall.js";
+import type { ActivityLogger, RunScope } from "./recall.js";
 
 const noopActivity: ActivityLogger = { log: async () => {} };
 
@@ -18,9 +18,11 @@ export async function handleObserve(
   client: AgentmemoryClient,
   input: ObserveInput,
   activity: ActivityLogger = noopActivity,
+  scope: RunScope = {},
 ): Promise<ObserveOutput> {
+  const project = input.project ?? scope.projectId;
   const [obsResult] = await Promise.all([
-    client.observe(input.observation, input.category, input.project),
+    client.observe(input.observation, input.category, project),
     client.createSketch(input.observation, input.category),
   ]);
 
@@ -30,7 +32,7 @@ export async function handleObserve(
 
   await activity.log({
     message: `Observed ${input.category}: ${truncated}`,
-    metadata: { category: input.category, project: input.project, memoryId: obsResult.id },
+    metadata: { category: input.category, project, memoryId: obsResult.id },
   });
 
   return { stored: obsResult.stored, id: obsResult.id };

@@ -5,6 +5,10 @@ export type ActivityLogger = {
   log(entry: { message: string; metadata?: Record<string, unknown> }): Promise<void>;
 };
 
+export type RunScope = {
+  projectId?: string;
+};
+
 const noopActivity: ActivityLogger = { log: async () => {} };
 
 export type RecallInput = {
@@ -23,9 +27,11 @@ export async function handleRecall(
   client: AgentmemoryClient,
   input: RecallInput,
   activity: ActivityLogger = noopActivity,
+  scope: RunScope = {},
 ): Promise<RecallOutput> {
+  const project = input.project ?? scope.projectId;
   const maxTokens = input.maxTokens ?? 48_200;
-  const rawResults = await client.smartSearch(input.query, 50, input.project);
+  const rawResults = await client.smartSearch(input.query, 50, project);
 
   const scored = rawResults.map((r) => ({
     content: r.content,
@@ -39,8 +45,8 @@ export async function handleRecall(
   const sources = items.map((item) => item.source);
 
   await activity.log({
-    message: `Recalled ${items.length} memories (${tokenCount} tokens)${input.project ? ` for project ${input.project}` : ""}`,
-    metadata: { tokenCount, resultCount: items.length, project: input.project },
+    message: `Recalled ${items.length} memories (${tokenCount} tokens)${project ? ` for project ${project}` : ""}`,
+    metadata: { tokenCount, resultCount: items.length, project },
   });
 
   return { context, tokenCount, sources };
