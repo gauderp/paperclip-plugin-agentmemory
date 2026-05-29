@@ -3,6 +3,7 @@ import { createTestHarness } from "@paperclipai/plugin-sdk/testing";
 import manifest from "../src/manifest.js";
 import plugin from "../src/worker.js";
 import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, CURATOR_AGENT_KEY, JOB_KEYS } from "../src/constants.js";
+import { resolveToken } from "../src/settings.js";
 
 const COMPANY_ID = "co-test-1";
 
@@ -80,6 +81,10 @@ describe("agentmemory plugin v0.4", () => {
     expect(health.httpStatus).toBe(200);
   }, 10000);
 
+  it("declares secrets.read-ref capability", () => {
+    expect(manifest.capabilities).toContain("secrets.read-ref");
+  });
+
   it("reports error when agentmemory is unreachable", async () => {
     vi.stubGlobal(
       "fetch",
@@ -97,4 +102,29 @@ describe("agentmemory plugin v0.4", () => {
 
     expect(health.status).toBe("error");
   }, 10000);
+});
+
+describe("secret token resolution", () => {
+  it("returns plain-text token as-is", async () => {
+    const result = await resolveToken("my-plain-token");
+    expect(result).toBe("my-plain-token");
+  });
+
+  it("returns undefined for empty token", async () => {
+    const result = await resolveToken(undefined);
+    expect(result).toBeUndefined();
+  });
+
+  it("resolves secret: prefixed token via resolver", async () => {
+    const resolver = vi.fn(async (_ref: string) => "resolved-secret-value");
+    const result = await resolveToken("secret:my-secret", resolver);
+    expect(resolver).toHaveBeenCalledWith("my-secret");
+    expect(result).toBe("resolved-secret-value");
+  });
+
+  it("falls back to raw value if resolver fails", async () => {
+    const resolver = vi.fn(async () => { throw new Error("not found"); });
+    const result = await resolveToken("secret:bad-ref", resolver);
+    expect(result).toBe("secret:bad-ref");
+  });
 });

@@ -39,6 +39,7 @@ const manifest: PaperclipPluginManifestV1 = {
     "events.subscribe",
     "ui.dashboardWidget.register",
     "ui.action.register",
+    "secrets.read-ref",
   ],
   tools: [
     {

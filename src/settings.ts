@@ -125,3 +125,19 @@ export function requireCompanyId(params: Record<string, unknown>): string {
   }
   return companyId;
 }
+
+export async function resolveToken(
+  token: string | undefined,
+  secretsResolver?: (ref: string) => Promise<string>,
+): Promise<string | undefined> {
+  if (!token || token.trim().length === 0) return undefined;
+  if (token.startsWith("secret:") && secretsResolver) {
+    const ref = token.slice("secret:".length);
+    try {
+      return await secretsResolver(ref);
+    } catch {
+      return token;
+    }
+  }
+  return token;
+}

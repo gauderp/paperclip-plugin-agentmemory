@@ -4,6 +4,7 @@ import {
   readCompanySettings,
   requireCompanyId,
   writeCompanySettings,
+  resolveToken,
   type AgentmemoryFullSettings,
 } from "./settings.js";
 import { calculateBudget } from "./budget.js";
@@ -42,6 +43,22 @@ const plugin = definePlugin({
       };
     }
 
+    async function buildClientWithSecrets(
+      settings: AgentmemoryFullSettings,
+    ): Promise<AgentmemoryClient> {
+      const token = await resolveToken(
+        settings.bearerToken,
+        ctx.secrets?.resolve?.bind(ctx.secrets),
+      );
+      return new AgentmemoryClient(
+        ctx.http,
+        settings.baseUrl,
+        settings.memoryNamespace,
+        token,
+        logger,
+      );
+    }
+
     // --- Reconcile skill and curator for all existing companies ---
     const companies = await ctx.companies.list();
     for (const company of companies) {
@@ -76,7 +93,7 @@ const plugin = definePlugin({
       if (!id) return { memoriesCount: 0, graphNodes: 0, graphEdges: 0 };
       try {
         const settings = await readCompanySettings(ctx, id);
-        const client = buildClient(ctx.http, settings, logger);
+        const client = await buildClientWithSecrets(settings);
         const [memoriesCount, graphStats] = await Promise.all([
           client.memoriesCount().catch(() => 0),
           client.graphStats().catch(() => ({ nodes: 0, edges: 0 })),
@@ -109,7 +126,7 @@ const plugin = definePlugin({
     ctx.actions.register("run-curator", async (params) => {
       const companyId = requireCompanyId(params);
       const settings = await readCompanySettings(ctx, companyId);
-      const client = buildClient(ctx.http, settings, logger);
+      const client = await buildClientWithSecrets(settings);
       return runCuratorJob(client, settings, logger);
     });
 
@@ -132,7 +149,7 @@ const plugin = definePlugin({
       async (params, runCtx) => {
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
-        const client = buildClient(ctx.http, settings, logger);
+        const client = await buildClientWithSecrets(settings);
         const budget = calculateBudget(settings.contextWindowSize, settings.memoryBudgetPercent);
         const activity = activityFor(runCtx.companyId);
         const result = await handleRecall(client, {
@@ -166,7 +183,7 @@ const plugin = definePlugin({
       async (params, runCtx) => {
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
-        const client = buildClient(ctx.http, settings, logger);
+        const client = await buildClientWithSecrets(settings);
         const activity = activityFor(runCtx.companyId);
         const result = await handleObserve(client, {
           observation: String(p.observation ?? ""),
@@ -195,7 +212,7 @@ const plugin = definePlugin({
       async (params, runCtx) => {
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
-        const client = buildClient(ctx.http, settings, logger);
+        const client = await buildClientWithSecrets(settings);
         const activity = activityFor(runCtx.companyId);
         const result = await handleSearch(client, {
           query: String(p.query ?? ""),
@@ -213,7 +230,7 @@ const plugin = definePlugin({
       for (const company of companies) {
         try {
           const settings = await readCompanySettings(ctx, company.id);
-          const client = buildClient(ctx.http, settings, logger);
+          const client = await buildClientWithSecrets(settings);
           const activity = activityFor(company.id);
           const result = await runCuratorJob(client, settings, logger);
           await activity.log({
@@ -236,7 +253,7 @@ const plugin = definePlugin({
       if (status !== "done" && status !== "completed") return;
       const settings = await readCompanySettings(ctx, companyId);
       if (!settings.enableAutoConsolidate) return;
-      const client = buildClient(ctx.http, settings, logger);
+      const client = await buildClientWithSecrets(settings);
       const activity = activityFor(companyId);
       const result = await runCuratorJob(client, settings, logger).catch((err) => {
         logger.warn("curator failed on issue.updated", { companyId, err });
