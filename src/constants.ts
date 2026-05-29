@@ -15,6 +15,7 @@ export const SKETCHES_GC_PATH = "/agentmemory/sketches/gc";
 export const GRAPH_EXTRACT_PATH = "/agentmemory/graph/extract";
 export const GRAPH_STATS_PATH = "/agentmemory/graph/stats";
 export const MEMORIES_PATH = "/agentmemory/memories";
+export const FORGET_PATH = "/agentmemory/forget";
 
 // Plugin state keys
 export const SETTINGS_STATE_KEY = "agentmemory.companySettings";
@@ -24,6 +25,7 @@ export const TOOL_KEYS = {
   recall: "memory-recall",
   observe: "memory-observe",
   search: "memory-search",
+  forget: "memory-forget",
 } as const;
 
 // Skill & agent keys

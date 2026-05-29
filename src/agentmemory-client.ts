@@ -11,6 +11,7 @@ import {
   GRAPH_EXTRACT_PATH,
   GRAPH_STATS_PATH,
   MEMORIES_PATH,
+  FORGET_PATH,
 } from "./constants.js";
 import type { PluginLogger } from "./logger.js";
 import { noopLogger } from "./logger.js";
@@ -146,5 +147,12 @@ export class AgentmemoryClient {
   async memoriesCount(): Promise<number> {
     const result = await this.get<{ count?: number; memories?: unknown[] }>(MEMORIES_PATH);
     return result.count ?? result.memories?.length ?? 0;
+  }
+
+  async forget(memoryId: string): Promise<{ forgotten: boolean }> {
+    return this.post(FORGET_PATH, {
+      memoryId,
+      namespace: this.namespace,
+    });
   }
 }

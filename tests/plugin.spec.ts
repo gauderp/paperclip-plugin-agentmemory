@@ -23,12 +23,13 @@ describe("agentmemory plugin v0.4", () => {
     expect(manifest.capabilities).toContain("companies.read");
   });
 
-  it("declares 3 tools in manifest", () => {
-    expect(manifest.tools).toHaveLength(3);
+  it("declares 4 tools in manifest", () => {
+    expect(manifest.tools).toHaveLength(4);
     const toolNames = manifest.tools!.map((t: any) => t.name);
     expect(toolNames).toContain(TOOL_KEYS.recall);
     expect(toolNames).toContain(TOOL_KEYS.observe);
     expect(toolNames).toContain(TOOL_KEYS.search);
+    expect(toolNames).toContain(TOOL_KEYS.forget);
   });
 
   it("declares managed skill", () => {

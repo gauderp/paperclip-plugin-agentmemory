@@ -12,6 +12,7 @@ import { AgentmemoryClient } from "./agentmemory-client.js";
 import { handleRecall, type ActivityLogger } from "./tools/recall.js";
 import { handleObserve } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
+import { handleForget } from "./tools/forget.js";
 import { reconcileSkill } from "./skill.js";
 import { reconcileCurator, runCuratorJob } from "./curator.js";
 import { TOOL_KEYS, JOB_KEYS } from "./constants.js";
@@ -218,6 +219,33 @@ const plugin = definePlugin({
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
           limit: typeof p.limit === "number" ? p.limit : settings.defaultSearchLimit,
+        }, activity);
+        return { data: result };
+      },
+    );
+
+    ctx.tools.register(
+      TOOL_KEYS.forget,
+      {
+        displayName: "Memory Forget",
+        description: "Remove a specific memory that is outdated or incorrect.",
+        parametersSchema: {
+          type: "object",
+          required: ["memoryId"],
+          properties: {
+            memoryId: { type: "string", description: "ID of the memory to remove (from recall/search results)" },
+            reason: { type: "string", description: "Why this memory is being removed" },
+          },
+        },
+      },
+      async (params, runCtx) => {
+        const p = params as Record<string, unknown>;
+        const settings = await readCompanySettings(ctx, runCtx.companyId);
+        const client = await buildClientWithSecrets(settings);
+        const activity = activityFor(runCtx.companyId);
+        const result = await handleForget(client, {
+          memoryId: String(p.memoryId ?? ""),
+          reason: p.reason ? String(p.reason) : undefined,
         }, activity);
         return { data: result };
       },

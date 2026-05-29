@@ -81,6 +81,19 @@ describe("AgentmemoryClient", () => {
     expect(stats.nodes).toBe(42);
   });
 
+  it("forget sends POST to forget endpoint", async () => {
+    const http = mockHttp({ forgotten: true });
+    const client = new AgentmemoryClient(http as any, "http://127.0.0.1:3111", "ns");
+
+    const result = await client.forget("obs-42");
+
+    expect(http.fetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:3111/agentmemory/forget",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(result.forgotten).toBe(true);
+  });
+
   it("throws on non-ok response", async () => {
     const http = mockHttp({ error: "not found" }, 404);
     const client = new AgentmemoryClient(http as any, "http://127.0.0.1:3111", "ns");

@@ -88,6 +88,19 @@ const manifest: PaperclipPluginManifestV1 = {
         },
       },
     },
+    {
+      name: TOOL_KEYS.forget,
+      displayName: "Memory Forget",
+      description: "Remove a specific memory that is outdated or incorrect.",
+      parametersSchema: {
+        type: "object",
+        required: ["memoryId"],
+        properties: {
+          memoryId: { type: "string", description: "ID of the memory to remove (from recall/search results)" },
+          reason: { type: "string", description: "Why this memory is being removed" },
+        },
+      },
+    },
   ],
   skills: [
     {
