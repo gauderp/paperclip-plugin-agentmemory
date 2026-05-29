@@ -14,7 +14,9 @@ import { handleObserve, type ObserveStateTracker } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
 import { handleForget } from "./tools/forget.js";
 import { reconcileSkill } from "./skill.js";
+import { reconcileReflection } from "./reflection.js";
 import { reconcileCurator, runCuratorJob } from "./curator.js";
+import { createMemoryEventEmitter, type MemoryEventEmitter } from "./events.js";
 import { TOOL_KEYS, JOB_KEYS } from "./constants.js";
 import type { PluginLogger } from "./logger.js";
 import { noopLogger } from "./logger.js";
@@ -60,6 +62,33 @@ const plugin = definePlugin({
       );
     }
 
+    // --- Cross-plugin event emitter ---
+    const emitter: MemoryEventEmitter = createMemoryEventEmitter(
+      async (name, companyId, payload) => {
+        await (ctx.events as any).emit(name, companyId, payload);
+      },
+    );
+
+    // --- Stream helper for real-time dashboard updates ---
+    async function pushStatsStream(companyId: string) {
+      try {
+        const settings = await readCompanySettings(ctx, companyId);
+        const client = await buildClientWithSecrets(settings);
+        const [memoriesCount, graphStats] = await Promise.all([
+          client.memoriesCount().catch(() => 0),
+          client.graphStats().catch(() => ({ nodes: 0, edges: 0 })),
+        ]);
+        (ctx as any).streams?.emit?.(`memory.stats.${companyId}`, {
+          memoriesCount,
+          graphNodes: graphStats.nodes,
+          graphEdges: graphStats.edges,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        logger.warn("failed to push stats stream", { companyId, err });
+      }
+    }
+
     const recallCache: RecallCache = {
       async get(runId: string) {
         try {
@@ -88,12 +117,14 @@ const plugin = definePlugin({
     for (const company of companies) {
       await reconcileSkill(ctx, company.id);
       await reconcileCurator(ctx, company.id);
+      await reconcileReflection(ctx, company.id);
     }
 
     // --- Reconcile on new company ---
     ctx.events.on("company.created", async (event) => {
       await reconcileSkill(ctx, event.companyId);
       await reconcileCurator(ctx, event.companyId);
+      await reconcileReflection(ctx, event.companyId);
     });
 
     // --- Data handler: health ---
@@ -182,6 +213,12 @@ const plugin = definePlugin({
           project: p.project ? String(p.project) : undefined,
           maxTokens: typeof p.maxTokens === "number" ? p.maxTokens : budget,
         }, activity, scope, recallCache);
+        emitter.recalled(runCtx.companyId, {
+          tokenCount: result.tokenCount,
+          resultsCount: result.sources.length,
+          project: scope.projectId,
+          query: String(p.query ?? ""),
+        }).catch(() => {});
         return { data: result };
       },
     );
@@ -216,6 +253,12 @@ const plugin = definePlugin({
           category: p.category as "decision" | "discovery" | "pattern" | "failure",
           project: p.project ? String(p.project) : undefined,
         }, activity, scope, observeTracker);
+        emitter.observed(runCtx.companyId, {
+          category: String(p.category ?? ""),
+          project: scope.projectId,
+          memoryId: result.id,
+        }).catch(() => {});
+        pushStatsStream(runCtx.companyId).catch(() => {});
         return { data: result };
       },
     );
@@ -273,6 +316,10 @@ const plugin = definePlugin({
           memoryId: String(p.memoryId ?? ""),
           reason: p.reason ? String(p.reason) : undefined,
         }, activity);
+        emitter.forgotten(runCtx.companyId, {
+          memoryId: String(p.memoryId ?? ""),
+          reason: p.reason ? String(p.reason) : undefined,
+        }).catch(() => {});
         return { data: result };
       },
     );
@@ -291,6 +338,8 @@ const plugin = definePlugin({
             message: `Curator: consolidated ${result.consolidated}, compressed ${result.compressed}, forgotten ${result.forgotten}, discarded ${result.discarded}`,
             metadata: result,
           });
+          emitter.consolidated(company.id, result).catch(() => {});
+          pushStatsStream(company.id).catch(() => {});
         } catch (err) {
           logger.error("curator job failed for company", { companyId: company.id, err });
         }

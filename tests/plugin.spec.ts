@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestHarness } from "@paperclipai/plugin-sdk/testing";
 import manifest from "../src/manifest.js";
 import plugin from "../src/worker.js";
-import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, CURATOR_AGENT_KEY, JOB_KEYS } from "../src/constants.js";
+import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, REFLECTION_SKILL_KEY, CURATOR_AGENT_KEY, JOB_KEYS } from "../src/constants.js";
 import { resolveToken } from "../src/settings.js";
 
 const COMPANY_ID = "co-test-1";
@@ -32,9 +32,11 @@ describe("agentmemory plugin v0.4", () => {
     expect(toolNames).toContain(TOOL_KEYS.forget);
   });
 
-  it("declares managed skill", () => {
-    expect(manifest.skills).toHaveLength(1);
-    expect((manifest.skills as any[])[0].skillKey).toBe(SKILL_KEY);
+  it("declares 2 managed skills", () => {
+    expect(manifest.skills).toHaveLength(2);
+    const keys = (manifest.skills as any[]).map((s: any) => s.skillKey);
+    expect(keys).toContain(SKILL_KEY);
+    expect(keys).toContain(REFLECTION_SKILL_KEY);
   });
 
   it("declares curator agent", () => {
@@ -84,6 +86,10 @@ describe("agentmemory plugin v0.4", () => {
 
   it("declares secrets.read-ref capability", () => {
     expect(manifest.capabilities).toContain("secrets.read-ref");
+  });
+
+  it("declares events.emit capability", () => {
+    expect(manifest.capabilities).toContain("events.emit");
   });
 
   it("reports error when agentmemory is unreachable", async () => {

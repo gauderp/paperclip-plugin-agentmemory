@@ -30,6 +30,7 @@ export const TOOL_KEYS = {
 
 // Skill & agent keys
 export const SKILL_KEY = "agent-memory";
+export const REFLECTION_SKILL_KEY = "memory-reflection";
 export const CURATOR_AGENT_KEY = "memory-curator";
 
 // Job keys

@@ -34,6 +34,7 @@ export type AgentmemoryMemoryConfig = {
   enableAutoConsolidate: boolean;
   enableAutoRecall: boolean;
   enableAutoObserve: boolean;
+  enableAutoReflection: boolean;
 };
 
 export type AgentmemoryFullSettings = AgentmemoryCompanySettings & AgentmemoryMemoryConfig;
@@ -49,6 +50,7 @@ export const MEMORY_CONFIG_DEFAULTS: AgentmemoryMemoryConfig = {
   enableAutoConsolidate: true,
   enableAutoRecall: true,
   enableAutoObserve: true,
+  enableAutoReflection: false,
 };
 
 function normalizeBaseUrl(value: unknown): string {
@@ -95,6 +97,7 @@ export function normalizeCompanySettings(
     enableAutoConsolidate: typeof input?.enableAutoConsolidate === "boolean" ? input.enableAutoConsolidate : MEMORY_CONFIG_DEFAULTS.enableAutoConsolidate,
     enableAutoRecall: typeof input?.enableAutoRecall === "boolean" ? input.enableAutoRecall : MEMORY_CONFIG_DEFAULTS.enableAutoRecall,
     enableAutoObserve: typeof input?.enableAutoObserve === "boolean" ? input.enableAutoObserve : MEMORY_CONFIG_DEFAULTS.enableAutoObserve,
+    enableAutoReflection: typeof input?.enableAutoReflection === "boolean" ? input.enableAutoReflection : MEMORY_CONFIG_DEFAULTS.enableAutoReflection,
   };
 }
 

@@ -5,10 +5,16 @@ import {
   SLOT_IDS,
   TOOL_KEYS,
   SKILL_KEY,
+  REFLECTION_SKILL_KEY,
   CURATOR_AGENT_KEY,
   JOB_KEYS,
 } from "./constants.js";
 import { SKILL_DISPLAY_NAME, SKILL_DESCRIPTION, SKILL_MARKDOWN } from "./skill.js";
+import {
+  REFLECTION_DISPLAY_NAME,
+  REFLECTION_DESCRIPTION,
+  REFLECTION_MARKDOWN,
+} from "./reflection.js";
 import {
   CURATOR_DISPLAY_NAME,
   CURATOR_ROLE,
@@ -20,7 +26,7 @@ import {
 const manifest: PaperclipPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
-  version: "0.5.0",
+  version: "0.6.0",
   displayName: "Agent Memory",
   description:
     "Memory-as-Skill system for Paperclip agents. Persistent recall, observation, and search with token budget enforcement.",
@@ -41,6 +47,7 @@ const manifest: PaperclipPluginManifestV1 = {
     "ui.action.register",
     "secrets.read-ref",
     "activity.log.write",
+    "events.emit",
   ],
   tools: [
     {
@@ -109,6 +116,12 @@ const manifest: PaperclipPluginManifestV1 = {
       displayName: SKILL_DISPLAY_NAME,
       description: SKILL_DESCRIPTION,
       markdown: SKILL_MARKDOWN,
+    },
+    {
+      skillKey: REFLECTION_SKILL_KEY,
+      displayName: REFLECTION_DISPLAY_NAME,
+      description: REFLECTION_DESCRIPTION,
+      markdown: REFLECTION_MARKDOWN,
     },
   ],
   jobs: [
