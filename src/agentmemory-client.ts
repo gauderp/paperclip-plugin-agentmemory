@@ -12,6 +12,8 @@ import {
   GRAPH_STATS_PATH,
   MEMORIES_PATH,
 } from "./constants.js";
+import type { PluginLogger } from "./logger.js";
+import { noopLogger } from "./logger.js";
 
 type HttpLike = Pick<PluginContext["http"], "fetch">;
 
@@ -21,6 +23,7 @@ export class AgentmemoryClient {
     private baseUrl: string,
     private namespace: string,
     private bearerToken?: string,
+    private logger: PluginLogger = noopLogger,
   ) {}
 
   private headers(): Record<string, string> {
@@ -41,7 +44,9 @@ export class AgentmemoryClient {
       body: JSON.stringify(body),
     });
     if (!response.ok) {
-      throw new Error(`agentmemory responded ${response.status} at ${path}`);
+      const msg = `agentmemory responded ${response.status} at ${path}`;
+      this.logger.error(msg, { status: response.status, path });
+      throw new Error(msg);
     }
     const text = await response.text();
     return text ? (JSON.parse(text) as T) : ({} as T);
@@ -53,7 +58,9 @@ export class AgentmemoryClient {
       headers: this.headers(),
     });
     if (!response.ok) {
-      throw new Error(`agentmemory responded ${response.status} at ${path}`);
+      const msg = `agentmemory responded ${response.status} at ${path}`;
+      this.logger.error(msg, { status: response.status, path });
+      throw new Error(msg);
     }
     const text = await response.text();
     return text ? (JSON.parse(text) as T) : ({} as T);

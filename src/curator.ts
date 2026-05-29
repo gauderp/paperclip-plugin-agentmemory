@@ -2,6 +2,8 @@ import type { PluginContext } from "@paperclipai/plugin-sdk";
 import { CURATOR_AGENT_KEY } from "./constants.js";
 import { AgentmemoryClient } from "./agentmemory-client.js";
 import type { AgentmemoryFullSettings } from "./settings.js";
+import type { PluginLogger } from "./logger.js";
+import { noopLogger } from "./logger.js";
 
 export const CURATOR_DISPLAY_NAME = "Memory Curator";
 export const CURATOR_ROLE = "memory-maintenance";
@@ -59,21 +61,22 @@ export function createClientFromSettings(
 export async function runCuratorJob(
   client: AgentmemoryClient,
   settings: AgentmemoryFullSettings,
+  logger: PluginLogger = noopLogger,
 ): Promise<{ consolidated: number; compressed: number; forgotten: number; discarded: number; extracted: number }> {
   const [consolidateResult, compressResult, forgetResult, gcResult] = await Promise.all([
-    client.consolidate().catch(() => ({ consolidated: 0 })),
-    client.flowCompress().catch(() => ({ compressed: 0 })),
-    client.autoForget(settings.autoForgetDays).catch(() => ({ forgotten: 0 })),
-    client.sketchesGc(settings.sketchTTLDays).catch(() => ({ discarded: 0 })),
+    client.consolidate().catch((err) => { logger.warn("consolidate failed", { err }); return { consolidated: 0 }; }),
+    client.flowCompress().catch((err) => { logger.warn("flowCompress failed", { err }); return { compressed: 0 }; }),
+    client.autoForget(settings.autoForgetDays).catch((err) => { logger.warn("autoForget failed", { err }); return { forgotten: 0 }; }),
+    client.sketchesGc(settings.sketchTTLDays).catch((err) => { logger.warn("sketchesGc failed", { err }); return { discarded: 0 }; }),
   ]);
 
   let extracted = 0;
   if (settings.enableKnowledgeGraph) {
-    const graphResult = await client.graphExtract().catch(() => ({ extracted: 0 }));
+    const graphResult = await client.graphExtract().catch((err) => { logger.warn("graphExtract failed", { err }); return { extracted: 0 }; });
     extracted = graphResult.extracted;
   }
 
-  await client.autoCrystallize().catch(() => {});
+  await client.autoCrystallize().catch((err) => { logger.warn("autoCrystallize failed", { err }); });
 
   return {
     consolidated: consolidateResult.consolidated,

@@ -14,21 +14,28 @@ import { handleSearch } from "./tools/search.js";
 import { reconcileSkill } from "./skill.js";
 import { reconcileCurator, runCuratorJob } from "./curator.js";
 import { TOOL_KEYS } from "./constants.js";
+import type { PluginLogger } from "./logger.js";
+import { noopLogger } from "./logger.js";
 
 function buildClient(
   http: { fetch(url: string, init?: RequestInit): Promise<Response> },
   settings: AgentmemoryFullSettings,
+  logger: PluginLogger = noopLogger,
 ): AgentmemoryClient {
   return new AgentmemoryClient(
     http,
     settings.baseUrl,
     settings.memoryNamespace,
     settings.bearerToken,
+    logger,
   );
 }
 
 const plugin = definePlugin({
   async setup(ctx) {
+    const logger: PluginLogger = ctx.logger ?? noopLogger;
+    logger.info("agentmemory plugin setup started");
+
     // --- Reconcile skill and curator for all existing companies ---
     const companies = await ctx.companies.list();
     for (const company of companies) {
@@ -63,7 +70,7 @@ const plugin = definePlugin({
       if (!id) return { memoriesCount: 0, graphNodes: 0, graphEdges: 0 };
       try {
         const settings = await readCompanySettings(ctx, id);
-        const client = buildClient(ctx.http, settings);
+        const client = buildClient(ctx.http, settings, logger);
         const [memoriesCount, graphStats] = await Promise.all([
           client.memoriesCount().catch(() => 0),
           client.graphStats().catch(() => ({ nodes: 0, edges: 0 })),
@@ -96,8 +103,8 @@ const plugin = definePlugin({
     ctx.actions.register("run-curator", async (params) => {
       const companyId = requireCompanyId(params);
       const settings = await readCompanySettings(ctx, companyId);
-      const client = buildClient(ctx.http, settings);
-      return runCuratorJob(client, settings);
+      const client = buildClient(ctx.http, settings, logger);
+      return runCuratorJob(client, settings, logger);
     });
 
     // --- Tool handlers ---
@@ -119,7 +126,7 @@ const plugin = definePlugin({
       async (params, runCtx) => {
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
-        const client = buildClient(ctx.http, settings);
+        const client = buildClient(ctx.http, settings, logger);
         const budget = calculateBudget(settings.contextWindowSize, settings.memoryBudgetPercent);
         const result = await handleRecall(client, {
           query: String(p.query ?? ""),
@@ -152,7 +159,7 @@ const plugin = definePlugin({
       async (params, runCtx) => {
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
-        const client = buildClient(ctx.http, settings);
+        const client = buildClient(ctx.http, settings, logger);
         const result = await handleObserve(client, {
           observation: String(p.observation ?? ""),
           category: p.category as "decision" | "discovery" | "pattern" | "failure",
@@ -180,7 +187,7 @@ const plugin = definePlugin({
       async (params, runCtx) => {
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
-        const client = buildClient(ctx.http, settings);
+        const client = buildClient(ctx.http, settings, logger);
         const result = await handleSearch(client, {
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
@@ -199,9 +206,13 @@ const plugin = definePlugin({
       if (status !== "done" && status !== "completed") return;
       const settings = await readCompanySettings(ctx, companyId);
       if (!settings.enableAutoConsolidate) return;
-      const client = buildClient(ctx.http, settings);
-      await runCuratorJob(client, settings).catch(() => {});
+      const client = buildClient(ctx.http, settings, logger);
+      await runCuratorJob(client, settings, logger).catch((err) => {
+        logger.warn("curator failed on issue.updated", { companyId, err });
+      });
     });
+
+    logger.info("agentmemory plugin setup complete");
   },
 
   async onHealth() {

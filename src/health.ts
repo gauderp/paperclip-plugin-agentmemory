@@ -39,7 +39,7 @@ export async function probeAgentmemory(
     let body: AgentmemoryHealthBody | null = null;
     try {
       body = bodyText ? (JSON.parse(bodyText) as AgentmemoryHealthBody) : null;
-    } catch {
+    } catch (_parseErr) {
       body = null;
     }
 
