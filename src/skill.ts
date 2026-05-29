@@ -7,24 +7,33 @@ export const SKILL_DESCRIPTION =
 
 export const SKILL_MARKDOWN = `# Agent Memory Protocol
 
-You have access to persistent memory tools. Use them to avoid re-doing work and to build institutional knowledge.
+You have access to persistent memory tools. Memory context is managed both automatically and manually.
 
-## At the start of each task
-1. Call \`memory-recall\` with a description of what you're about to do
-2. Read the returned context — it contains prior decisions, known patterns, and past failures relevant to your task
-3. Do NOT re-investigate what memory already answered
+## Automatic behavior (no action needed)
+- **Auto-recall:** Memory context is loaded automatically at the start of each run. You receive prior decisions, known patterns, and past failures relevant to your current task.
+- **Auto-observe:** A summary of your work is recorded automatically at the end of each run.
 
-## During work
-- Discovered something non-obvious? → \`memory-observe\` with category \`"discovery"\`
-- Made an architectural decision? → \`memory-observe\` with category \`"decision"\`
-- Something failed unexpectedly? → \`memory-observe\` with category \`"failure"\`
-- Identified a recurring pattern? → \`memory-observe\` with category \`"pattern"\`
+## When to use tools manually
 
-## When in doubt
+### memory-recall
+Use \`memory-recall\` only when you need context NOT covered by the auto-loaded memory:
+- Searching for something specific from a different project
+- Narrowing down to a particular topic mid-task
+
+### memory-observe
+Use \`memory-observe\` during work for **high-value insights only**:
+- Made an architectural decision? → category \`"decision"\`
+- Something failed unexpectedly? → category \`"failure"\`
+- Discovered something non-obvious? → category \`"discovery"\`
+- Identified a recurring pattern? → category \`"pattern"\`
+
+Basic run summaries are captured automatically — only observe what the auto-summary would miss.
+
+### memory-search
 - "Have we tried this before?" → \`memory-search\` before investigating from scratch
 - "How did we solve X last time?" → \`memory-search\` with relevant context
 
-## Correcting memories
+### memory-forget
 - Recall returned something outdated or wrong? → \`memory-forget\` with the memoryId from the result
 - Then observe the correct information with \`memory-observe\`
 - Search results and recall results include a \`source\` field — use it as the memoryId for forget
