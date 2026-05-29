@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestHarness } from "@paperclipai/plugin-sdk/testing";
 import manifest from "../src/manifest.js";
 import plugin from "../src/worker.js";
-import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, CURATOR_AGENT_KEY } from "../src/constants.js";
+import { DEFAULT_BASE_URL, HEALTH_PATH, TOOL_KEYS, SKILL_KEY, CURATOR_AGENT_KEY, JOB_KEYS } from "../src/constants.js";
 
 const COMPANY_ID = "co-test-1";
 
@@ -38,6 +38,13 @@ describe("agentmemory plugin v0.4", () => {
   it("declares curator agent", () => {
     expect(manifest.agents).toHaveLength(1);
     expect((manifest.agents as any[])[0].agentKey).toBe(CURATOR_AGENT_KEY);
+  });
+
+  it("declares curator job in manifest", () => {
+    expect(manifest.jobs).toBeDefined();
+    const jobs = manifest.jobs as any[];
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].jobKey).toBe(JOB_KEYS.curatorCycle);
   });
 
   it("declares 3 UI slots (health widget, stats widget, settings)", () => {

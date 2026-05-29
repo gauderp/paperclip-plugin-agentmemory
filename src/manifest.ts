@@ -6,6 +6,7 @@ import {
   TOOL_KEYS,
   SKILL_KEY,
   CURATOR_AGENT_KEY,
+  JOB_KEYS,
 } from "./constants.js";
 import { SKILL_DISPLAY_NAME, SKILL_DESCRIPTION, SKILL_MARKDOWN } from "./skill.js";
 import {
@@ -93,6 +94,14 @@ const manifest: PaperclipPluginManifestV1 = {
       displayName: SKILL_DISPLAY_NAME,
       description: SKILL_DESCRIPTION,
       markdown: SKILL_MARKDOWN,
+    },
+  ],
+  jobs: [
+    {
+      jobKey: JOB_KEYS.curatorCycle,
+      displayName: "Memory Curator Cycle",
+      description: "Consolidates observations, compresses history, cleans expired data.",
+      schedule: "0 */6 * * *",
     },
   ],
   agents: [

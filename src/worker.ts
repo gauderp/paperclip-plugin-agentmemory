@@ -13,7 +13,7 @@ import { handleObserve } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
 import { reconcileSkill } from "./skill.js";
 import { reconcileCurator, runCuratorJob } from "./curator.js";
-import { TOOL_KEYS } from "./constants.js";
+import { TOOL_KEYS, JOB_KEYS } from "./constants.js";
 import type { PluginLogger } from "./logger.js";
 import { noopLogger } from "./logger.js";
 
@@ -206,6 +206,27 @@ const plugin = definePlugin({
       },
     );
 
+    // --- Curator scheduled job ---
+    ctx.jobs.register(JOB_KEYS.curatorCycle, async (job) => {
+      logger.info("curator job started", { trigger: job.trigger, runId: job.runId });
+      const companies = await ctx.companies.list();
+      for (const company of companies) {
+        try {
+          const settings = await readCompanySettings(ctx, company.id);
+          const client = buildClient(ctx.http, settings, logger);
+          const activity = activityFor(company.id);
+          const result = await runCuratorJob(client, settings, logger);
+          await activity.log({
+            message: `Curator: consolidated ${result.consolidated}, compressed ${result.compressed}, forgotten ${result.forgotten}, discarded ${result.discarded}`,
+            metadata: result,
+          });
+        } catch (err) {
+          logger.error("curator job failed for company", { companyId: company.id, err });
+        }
+      }
+      logger.info("curator job completed");
+    });
+
     // --- Auto-consolidate on issue completion ---
     ctx.events.on("issue.updated", async (event) => {
       const companyId = event.companyId;
@@ -216,9 +237,17 @@ const plugin = definePlugin({
       const settings = await readCompanySettings(ctx, companyId);
       if (!settings.enableAutoConsolidate) return;
       const client = buildClient(ctx.http, settings, logger);
-      await runCuratorJob(client, settings, logger).catch((err) => {
+      const activity = activityFor(companyId);
+      const result = await runCuratorJob(client, settings, logger).catch((err) => {
         logger.warn("curator failed on issue.updated", { companyId, err });
+        return null;
       });
+      if (result) {
+        await activity.log({
+          message: `Curator (issue completed): consolidated ${result.consolidated}, compressed ${result.compressed}`,
+          metadata: result,
+        });
+      }
     });
 
     logger.info("agentmemory plugin setup complete");

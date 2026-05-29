@@ -30,6 +30,11 @@ export const TOOL_KEYS = {
 export const SKILL_KEY = "agent-memory";
 export const CURATOR_AGENT_KEY = "memory-curator";
 
+// Job keys
+export const JOB_KEYS = {
+  curatorCycle: "curator-cycle",
+} as const;
+
 // UI exports
 export const EXPORT_NAMES = {
   dashboardWidget: "DashboardWidget",
