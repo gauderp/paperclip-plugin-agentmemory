@@ -8,7 +8,7 @@ import {
 } from "./settings.js";
 import { calculateBudget } from "./budget.js";
 import { AgentmemoryClient } from "./agentmemory-client.js";
-import { handleRecall } from "./tools/recall.js";
+import { handleRecall, type ActivityLogger } from "./tools/recall.js";
 import { handleObserve } from "./tools/observe.js";
 import { handleSearch } from "./tools/search.js";
 import { reconcileSkill } from "./skill.js";
@@ -35,6 +35,12 @@ const plugin = definePlugin({
   async setup(ctx) {
     const logger: PluginLogger = ctx.logger ?? noopLogger;
     logger.info("agentmemory plugin setup started");
+
+    function activityFor(companyId: string): ActivityLogger {
+      return {
+        log: (entry) => ctx.activity.log({ companyId, ...entry }),
+      };
+    }
 
     // --- Reconcile skill and curator for all existing companies ---
     const companies = await ctx.companies.list();
@@ -128,11 +134,12 @@ const plugin = definePlugin({
         const settings = await readCompanySettings(ctx, runCtx.companyId);
         const client = buildClient(ctx.http, settings, logger);
         const budget = calculateBudget(settings.contextWindowSize, settings.memoryBudgetPercent);
+        const activity = activityFor(runCtx.companyId);
         const result = await handleRecall(client, {
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
           maxTokens: typeof p.maxTokens === "number" ? p.maxTokens : budget,
-        });
+        }, activity);
         return { data: result };
       },
     );
@@ -160,11 +167,12 @@ const plugin = definePlugin({
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
         const client = buildClient(ctx.http, settings, logger);
+        const activity = activityFor(runCtx.companyId);
         const result = await handleObserve(client, {
           observation: String(p.observation ?? ""),
           category: p.category as "decision" | "discovery" | "pattern" | "failure",
           project: p.project ? String(p.project) : undefined,
-        });
+        }, activity);
         return { data: result };
       },
     );
@@ -188,11 +196,12 @@ const plugin = definePlugin({
         const p = params as Record<string, unknown>;
         const settings = await readCompanySettings(ctx, runCtx.companyId);
         const client = buildClient(ctx.http, settings, logger);
+        const activity = activityFor(runCtx.companyId);
         const result = await handleSearch(client, {
           query: String(p.query ?? ""),
           project: p.project ? String(p.project) : undefined,
           limit: typeof p.limit === "number" ? p.limit : settings.defaultSearchLimit,
-        });
+        }, activity);
         return { data: result };
       },
     );

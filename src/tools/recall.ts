@@ -1,6 +1,12 @@
 import type { AgentmemoryClient } from "../agentmemory-client.js";
 import { truncateToTokenBudget } from "../budget.js";
 
+export type ActivityLogger = {
+  log(entry: { message: string; metadata?: Record<string, unknown> }): Promise<void>;
+};
+
+const noopActivity: ActivityLogger = { log: async () => {} };
+
 export type RecallInput = {
   query: string;
   project?: string;
@@ -16,6 +22,7 @@ export type RecallOutput = {
 export async function handleRecall(
   client: AgentmemoryClient,
   input: RecallInput,
+  activity: ActivityLogger = noopActivity,
 ): Promise<RecallOutput> {
   const maxTokens = input.maxTokens ?? 48_200;
   const rawResults = await client.smartSearch(input.query, 50, input.project);
@@ -30,6 +37,11 @@ export async function handleRecall(
 
   const context = items.map((item) => item.content).join("\n\n---\n\n");
   const sources = items.map((item) => item.source);
+
+  await activity.log({
+    message: `Recalled ${items.length} memories (${tokenCount} tokens)${input.project ? ` for project ${input.project}` : ""}`,
+    metadata: { tokenCount, resultCount: items.length, project: input.project },
+  });
 
   return { context, tokenCount, sources };
 }
