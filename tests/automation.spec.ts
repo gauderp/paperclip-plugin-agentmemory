@@ -37,7 +37,7 @@ describe("automation", () => {
       capabilities: [...manifest.capabilities, "companies.read"],
     });
     harness.seed({
-      companies: [{ id: COMPANY_ID, name: "Test Co" }],
+      companies: [{ id: COMPANY_ID, name: "Test Co" } as any],
       issues: [
         {
           id: "issue-1",
@@ -84,7 +84,7 @@ describe("automation", () => {
       manifest,
       capabilities: [...manifest.capabilities, "companies.read"],
     });
-    harness.seed({ companies: [{ id: COMPANY_ID, name: "Test Co" }] });
+    harness.seed({ companies: [{ id: COMPANY_ID, name: "Test Co" } as any] });
     await plugin.definition.setup(harness.ctx);
 
     await harness.performAction("save-company-settings", {
@@ -126,7 +126,7 @@ describe("automation", () => {
       capabilities: [...manifest.capabilities, "companies.read"],
     });
     harness.seed({
-      companies: [{ id: COMPANY_ID, name: "Test Co" }],
+      companies: [{ id: COMPANY_ID, name: "Test Co" } as any],
       issues: [
         { id: "issue-1", companyId: COMPANY_ID, title: "Fix login bug" } as any,
       ],
@@ -165,7 +165,7 @@ describe("automation", () => {
       manifest,
       capabilities: [...manifest.capabilities, "companies.read"],
     });
-    harness.seed({ companies: [{ id: COMPANY_ID, name: "Test Co" }] });
+    harness.seed({ companies: [{ id: COMPANY_ID, name: "Test Co" } as any] });
     await plugin.definition.setup(harness.ctx);
 
     await harness.performAction("save-company-settings", {
@@ -206,7 +206,7 @@ describe("automation", () => {
       manifest,
       capabilities: [...manifest.capabilities, "companies.read"],
     });
-    harness.seed({ companies: [{ id: COMPANY_ID, name: "Test Co" }] });
+    harness.seed({ companies: [{ id: COMPANY_ID, name: "Test Co" } as any] });
     await plugin.definition.setup(harness.ctx);
 
     await harness.performAction("save-company-settings", {
